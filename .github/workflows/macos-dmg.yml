@@ -1,0 +1,35 @@
+name: Mac DMG
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dmg:
+    name: Build Apple Silicon DMG
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show build environment
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
+          df -h /
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Build DMG
+        run: ./tools/build-mac-dmg.sh
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Continuum-mac-arm64-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
