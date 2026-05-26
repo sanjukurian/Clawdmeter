@@ -68,6 +68,18 @@ echo "  project:   $PROJECT"
 echo "  output:    $DMG_PATH"
 echo ""
 
+ARCHIVE_SIGNING_ARGS=()
+if [[ "${CLAWDMETER_UNSIGNED_CI:-0}" == "1" ]]; then
+  echo "⚠ Building unsigned CI archive — GitHub runners do not have Apple provisioning profiles"
+  ARCHIVE_SIGNING_ARGS=(
+    CODE_SIGNING_ALLOWED=NO
+    CODE_SIGNING_REQUIRED=NO
+    CODE_SIGN_IDENTITY=
+    DEVELOPMENT_TEAM=
+    PROVISIONING_PROFILE_SPECIFIER=
+  )
+fi
+
 # ────────────────────────────────────────────────────────────────────────
 # 1. Clean output dirs
 # ────────────────────────────────────────────────────────────────────────
@@ -106,6 +118,7 @@ xcodebuild archive \
   -archivePath "$ARCHIVE_PATH" \
   ARCHS=arm64 \
   ONLY_ACTIVE_ARCH=NO \
+  "${ARCHIVE_SIGNING_ARGS[@]}" \
   -quiet
 echo "✓ Archive: $ARCHIVE_PATH"
 
@@ -157,6 +170,11 @@ fi
 APP_PATH="$EXPORT_DIR/${APP_NAME}.app"
 [[ -d "$APP_PATH" ]] || { echo "✗ No .app produced"; exit 1; }
 echo "✓ App exported: $APP_PATH"
+
+if [[ "${CLAWDMETER_UNSIGNED_CI:-0}" == "1" ]]; then
+  echo "▸ Ad-hoc signing app bundle for CI artifact"
+  codesign --force --deep --sign - "$APP_PATH" 2>&1 | sed 's/^/    /' || true
+fi
 
 # ────────────────────────────────────────────────────────────────────────
 # 4b. v0.29.4: re-sign the Vendor/opencode helper binary.
